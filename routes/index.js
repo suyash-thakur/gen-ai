@@ -4,11 +4,25 @@ const gpt = require('../services/gpt/gpt');
 const prompt = require('../services/gpt/prompt');
 
 const User = require('../models/user');
+const Message = require('../models/message');
+const DailyTask = require('../models/DailyTask');
 
 const pingServer = async (req, res) => {
     res.send('pong')
 }
 
+const getUser = async (req, res, next) => {
+    const { username } = req.body;
+    try {
+        if (!username) next();
+        const user = await User.findOne({ username });
+        req.user = user;
+        next();
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Error');
+    }
+}
 
 const getInfoQuestion = async (req, res) => {
     try {
@@ -16,8 +30,8 @@ const getInfoQuestion = async (req, res) => {
 
         const message = prompt.getMessage({ promptType: 'INIT', variables });
         const response = await gpt.chatCompletion({ messages: [message] });
-        let isUserExist = await User.findOne({ username });
-        if (!isUserExist) {
+        const user = req.user;
+        if (!user) {
             const user = new User({
                 username,
                 learn: variables[0],
@@ -35,15 +49,15 @@ const getInfoQuestion = async (req, res) => {
 const respondInfoQuestion = async (req, res) => {
     let messages = [];
     try {
-        const { responses, username } = req.body;
-        const user = await User.findOne({ username });
-        if (!user) {
-            res.status(401).send("Error")
+        const { responses, } = req.body;
+        const user = req.user;
+        if (!user) throw new Error('User not found');
+        let parsedResponse = '';
+        for (const response of responses) {
+            const { question, answer } = response;
+            parsedResponse += `${question} - ${answer} \n`;
         }
-        const initQuestion = prompt.getMessage({ promptType: 'INIT', variables: [user.learn, user.days] });
-        messages = [initQuestion];
-        messages = prompt.parseToMessages({ responses });
-        const message = prompt.getMessage({ promptType: 'DIFFICULTY', variables: null });
+        const message = prompt.getMessage({ promptType: 'DIFFICULTY', variables: [parsedResponse, user.learn, user.days] });
         messages.push(message);
         const response = await gpt.chatCompletion({ messages });
         res.send(response);
@@ -53,10 +67,53 @@ const respondInfoQuestion = async (req, res) => {
     }
 }
 
+const createRoadMap = async (req, res) => {
 
+    try {
+        const user = req.user;
+        if (!user) throw new Error('User not found');
+        const { learn, days } = user;
+        const message = prompt.getMessage({ promptType: 'ROADMAP', variables: [learn, days] });
+        const response = await gpt.chatCompletion({ messages: [message] });
+        const tasks = JSON.parse(response);
+        res.send(tasks);
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Error');
+    }
+}
+
+const saveTasks = async (req, res) => {
+    try {
+        const { tasks } = req.body;
+        const user = req.user;
+        if (!user) throw new Error('User not found');
+
+        for (const task of tasks) {
+            console.log(task);
+            const dailyTask = new DailyTask({
+                user: user._id,
+                day: task.day,
+                task: task.task
+            });
+            await dailyTask.save();
+        }
+
+        res.send('ok');
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Error');
+    }
+}
+
+
+
+router.use(getUser);
 
 router.get('/ping', pingServer);
 router.post('/feasibility', getInfoQuestion);
 router.post('/info', respondInfoQuestion);
+router.post('/roadmap', createRoadMap);
+router.post('/tasks', saveTasks);
 
 module.exports = router;
