@@ -1,4 +1,3 @@
-// Create endpoints for gpt completion and dalle generation
 const { Configuration, OpenAIApi } = require('openai');
 
 const config = new Configuration({
@@ -8,7 +7,6 @@ const config = new Configuration({
 
 const openai = new OpenAIApi(config);
 
-console.log(openai);
 
 const chatCompletion = async ({ messages }) => {
     try {

@@ -1,9 +1,14 @@
 const promptMap = {
     INIT: {
-        content: 'I want to become #---# in #---# days. ask me relevant questions and tell me how difficult that will be for me. Give me final answer with high / med / low',
+        content: 'I want to become #---# in #---# days. ask me relevant questions',
         role: 'user',
         variableCount: 2,
     },
+    DIFFICULTY: {
+        content: 'tell me how difficult that will be for me. Give me final answer with high / med / low',
+        role: 'user',
+        variableCount: 0
+    }
 };
 
 
