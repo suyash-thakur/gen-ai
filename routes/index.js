@@ -7,6 +7,8 @@ const User = require('../models/user');
 const Message = require('../models/message');
 const DailyTask = require('../models/DailyTask');
 
+const whatsapp = require('../services/whatsapp');
+
 const pingServer = async (req, res) => {
     res.send('pong')
 }
@@ -24,6 +26,21 @@ const getUser = async (req, res, next) => {
     }
 }
 
+const signup = async (req, res) => {
+    try {
+        const { username, mobileNumber } = req.body;
+        const user = new User({
+            username,
+            mobileNumber
+        });
+        await user.save();
+        await whatsapp.trackUser({ name: username, mobileNumber });
+        res.send('Success');
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Error');
+    }
+}
 const getInfoQuestion = async (req, res) => {
     try {
         const { variables, username } = req.body;
@@ -37,6 +54,11 @@ const getInfoQuestion = async (req, res) => {
                 learn: variables[0],
                 days: variables[1]
             });
+            await user.save();
+        }
+        if (user && user.learn !== variables[0] && user.days !== variables[1]) {
+            user.learn = variables[0];
+            user.days = variables[1];
             await user.save();
         }
         res.send(response);
@@ -111,6 +133,7 @@ const saveTasks = async (req, res) => {
 router.use(getUser);
 
 router.get('/ping', pingServer);
+router.post('/signup', signup);
 router.post('/feasibility', getInfoQuestion);
 router.post('/info', respondInfoQuestion);
 router.post('/roadmap', createRoadMap);
