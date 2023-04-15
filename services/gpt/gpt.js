@@ -8,14 +8,16 @@ const config = new Configuration({
 
 const openai = new OpenAIApi(config);
 
-const chatCompletion = async ({ messages }) => { 
+console.log(openai);
+
+const chatCompletion = async ({ messages }) => {
     try {
-        if(!messages || messages.length === 0) throw new Error('No messages provided');
+        if (!messages || messages.length === 0) throw new Error('No messages provided');
         const config = {
             model: 'gpt-3.5-turbo',
             messages,
         };
-        const response = await openai.completion(config);
+        const response = await openai.createChatCompletion(config);
         return response.data.choices[0].message.content;
     } catch (error) {
         console.error(error);
@@ -31,7 +33,7 @@ const imageGeneration = async ({ prompt }) => {
             prompt,
             n: 1,
             size: '512x512',
-    }
+        }
         const response = await openai.imageCompletion(config);
         return response.data.images[0];
     } catch (error) {
