@@ -37,7 +37,6 @@ const postRequest = async ({ url, data }) => {
     try {
         await axios(config);
     } catch (err) {
-        reportErrorToSentry({ err });
         return { success: false };
     }
     return { success: true };
