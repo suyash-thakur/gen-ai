@@ -4,8 +4,8 @@ const gpt = require('../services/gpt/gpt');
 const prompt = require('../services/gpt/prompt');
 
 const User = require('../models/user');
-const Message = require('../models/message');
 const DailyTask = require('../models/DailyTask');
+const Message = require("../store/message");
 
 const whatsapp = require('../services/whatsapp');
 
@@ -14,10 +14,10 @@ const pingServer = async (req, res) => {
 }
 
 const getUser = async (req, res, next) => {
-  const { username } = req.body;
+  const { mobileNumber } = req.body;
   try {
-    if (!username) next();
-    const user = await User.findOne({ username });
+    if (!mobileNumber) next();
+    const user = await User.findOne({ mobileNumber });
     req.user = user;
     next();
   } catch (error) {
@@ -28,8 +28,11 @@ const getUser = async (req, res, next) => {
 
 const signup = async (req, res) => {
   try {
-    const { username, mobileNumber } = req.body;
-    if (!username || !mobileNumber) throw new Error('Username or mobile number not provided');
+    const { mobileNumber } = req.body;
+    if (!mobileNumber) throw new Error('Username or mobile number not provided');
+
+    //randomly generate username
+    const username = 'user' + Math.floor(Math.random() * 1000000) + 1;
     const user = new User({
       username,
       mobileNumber
@@ -48,6 +51,8 @@ const getInfoQuestion = async (req, res) => {
 
     const message = prompt.getMessage({ promptType: 'INIT', variables });
     const response = await gpt.chatCompletion({ messages: [message] });
+    Message.add(message, 'INIT')
+    Message.add(response, 'INIT')
     const user = req.user;
     if (!user) {
       const user = new User({
@@ -130,7 +135,26 @@ const saveTasks = async (req, res) => {
   }
 }
 
+router.post("/webhook", (req, res) => {
+  // Retrieve the request body
+  const { body } = req;
 
+  const data = body.data;
+
+  if (
+    body.type === "message_received" &&
+    data.customer.phone_number === "8141235438"
+  ) {
+    console.log("incoming message");
+    if (data.message === "Hey!") {
+      // this is the start of the conversation.
+    }
+  }
+
+  res.send({
+    message: "Webhook received successfully",
+  });
+});
 
 router.use(getUser);
 
