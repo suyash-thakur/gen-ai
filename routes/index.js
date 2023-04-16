@@ -13,22 +13,18 @@ const pingServer = async (req, res) => {
   res.send('pong')
 }
 
-const getUser = async (req, res, next) => {
-  const { mobileNumber } = req.body;
+const getUser = async (mobileNumber) => {
   try {
     if (!mobileNumber) next();
     const user = await User.findOne({ mobileNumber });
-    req.user = user;
-    next();
+    return user;
   } catch (error) {
     console.error(error);
-    res.status(500).send('Error');
   }
 }
 
-const signup = async (req, res) => {
+const signup = async (mobileNumber) => {
   try {
-    const { mobileNumber } = req.body;
     if (!mobileNumber) throw new Error('Username or mobile number not provided');
 
     //randomly generate username
@@ -39,10 +35,8 @@ const signup = async (req, res) => {
     });
     await user.save();
     await whatsapp.trackUser({ name: username, mobileNumber });
-    res.send('Success');
   } catch (error) {
     console.error(error);
-    res.status(500).send('Error');
   }
 }
 const getInfoQuestion = async (req, res) => {
@@ -135,7 +129,7 @@ const saveTasks = async (req, res) => {
   }
 }
 
-router.post("/webhook", (req, res) => {
+router.post("/webhook", async (req, res) => {
   // Retrieve the request body
   const { body } = req;
 
@@ -147,7 +141,16 @@ router.post("/webhook", (req, res) => {
   ) {
     console.log("incoming message");
     if (data.message === "Hey!") {
-      // this is the start of the conversation.
+      await signup(data.customer.phone_number);
+      await whatsapp.trackEvent({
+        mobileNumber: data.customer.phone_number,
+        event: 'GEN-AI-REMINDER',
+        traits: {
+          message1: 'Hey! I am your AI assistant. I will help you learn anything.',
+          message2: 'I will also send you reminders to complete your tasks.',
+          message3: 'Let\'s get started. What do you want to learn?',
+        }
+      });
     }
   }
 

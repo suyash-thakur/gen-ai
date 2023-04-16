@@ -5,6 +5,7 @@ const get = (trigger, role) => {
 }
 
 const add = (message, trigger) => {
-    message.trigger = trigger;
+    message.trigger = trigger; ha
+
     messages.push(message);
 }
